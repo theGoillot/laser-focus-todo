@@ -1,0 +1,6 @@
+// Copy to Local.xcconfig (ignored by git) and fill in. Find your team id in Xcode > Settings > Accounts,
+// or in your "Apple Development" certificate (its Organizational Unit).
+LF_BUNDLE_ID = com.yourname.laserfocus
+DEVELOPMENT_TEAM = YOURTEAMID
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY = Apple Development

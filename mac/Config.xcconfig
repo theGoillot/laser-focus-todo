@@ -1,0 +1,8 @@
+// Shared build settings. Personal values (your Apple team, your bundle id) go in Local.xcconfig, which git ignores.
+// Copy Local.xcconfig.example to Local.xcconfig and fill it in. Without it the app builds ad-hoc signed.
+LF_BUNDLE_ID = com.example.laserfocus
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = -
+DEVELOPMENT_TEAM =
+
+#include? "Local.xcconfig"

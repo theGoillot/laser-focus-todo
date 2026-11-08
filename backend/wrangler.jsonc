@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "laser-focus",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": { "bindings": [{ "name": "STORE", "class_name": "Store" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Store"] }],
+  // AGENT_NAME labels your agent's items in the app. TIMEZONE is what "today" means for the agent (IANA name).
+  // Personal values: copy this file to wrangler.local.jsonc (ignored by git); every script prefers it.
+  "vars": { "AGENT_NAME": "Agent", "TIMEZONE": "UTC" }
+}

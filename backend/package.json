@@ -1,0 +1,30 @@
+{
+  "name": "menubar-todo-backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "sh ../scripts/wrangler.sh dev",
+    "deploy": "sh ../scripts/wrangler.sh deploy",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "tail": "sh ../scripts/wrangler.sh tail"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "fractional-indexing": "^4.0.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.6.0",
+    "@cloudflare/workers-types": "^5.20261107.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0",
+    "wrangler": "^4.158.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "workerd"
+    ]
+  }
+}

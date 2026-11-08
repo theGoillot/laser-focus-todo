@@ -1,0 +1,51 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+# Read-only token. No Cloudflare or Apple credentials exist in this repo or its settings, so a pull request has nothing to steal.
+permissions:
+  contents: read
+jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Built-in scan (keys, blocked files)
+        run: sh scripts/check-secrets.sh --all
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  backend:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: backend } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: backend/pnpm-lock.yaml }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+  scripts:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: scripts } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm, cache-dependency-path: scripts/pnpm-lock.yaml }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm vitest run
+  mac:
+    runs-on: macos-15
+    defaults: { run: { working-directory: mac } }
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      # No Local.xcconfig in CI: the shared Config.xcconfig builds ad-hoc signed, no Apple account needed.
+      - run: xcodegen -q && xcodebuild test -scheme MenuBarTodo -destination 'platform=macOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO | tail -40

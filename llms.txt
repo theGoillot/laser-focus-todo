@@ -1,0 +1,12 @@
+# Laser Focus
+
+> Open-source Mac menu bar to-do outliner (Swift) synced to a Cloudflare Worker (TypeScript) that exposes an MCP
+> server, so an AI agent can read and write the same list. Workflowy-style outline, Things-style Today/When/Deadline,
+> inline #tags, notes, offline-first sync. MIT. Fork it to build your own agent-friendly to-do app.
+
+- [README](README.md): what it is and why
+- [AGENTS.md](AGENTS.md): code map, commands, rules for coding agents
+- [Architecture](docs/ARCHITECTURE.md): data model, ops, sync and merge, undo
+- [MCP](docs/MCP.md): the 10 agent tools and how to connect
+- [Self-hosting](docs/SELF-HOSTING.md): deploy your own in about 15 minutes
+- [Roadmap](docs/ROADMAP.md): open ideas to contribute
