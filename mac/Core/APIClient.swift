@@ -24,8 +24,10 @@ public struct APIClient: SyncAPI {
         return r
     }
 
-    public func postOps(_ ops: [Op]) async throws -> SyncResponse {
-        try await send(request("v1/ops", method: "POST", body: try JSONEncoder().encode(["ops": ops])))
+    public func postOps(_ ops: [Op], since: Int) async throws -> SyncResponse {
+        var r = request("v1/ops", method: "POST", body: try JSONEncoder().encode(["ops": ops]))
+        r.url = r.url.flatMap { URL(string: $0.absoluteString + "?since=\(since)") }
+        return try await send(r)
     }
 
     public func sync(since: Int) async throws -> SyncResponse {

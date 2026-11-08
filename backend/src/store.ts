@@ -17,7 +17,9 @@ export class Store extends DurableObject<Env> {
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
   }
 
-  applyOps(actor: Actor, ops: Op[]): ApplyResult {
+  /** Applies a batch atomically. With `since`, the answer also carries every change newer than that cursor, so
+   *  the Mac's push doubles as its pull (one round trip per edit instead of two). */
+  applyOps(actor: Actor, ops: Op[], since?: number): ApplyResult {
     const before = this.db.version();
     let index = 0;
     try {
@@ -31,7 +33,8 @@ export class Store extends DurableObject<Env> {
     }
     const after = this.db.version();
     if (after !== before) this.afterCommit(after);
-    return { ok: true, version: after, items: this.db.since(before) };
+    if (since === undefined) return { ok: true, version: after, items: this.db.since(before) };
+    return { ok: true, version: after, items: this.db.since(since), since };
   }
 
   /** Hook for live updates (Task 3). */

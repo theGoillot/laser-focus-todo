@@ -9,6 +9,12 @@ const MCP_AUTH_HELP =
   "Laser Focus MCP needs the agent key. Send the header Authorization: Bearer <LASER_FOCUS_API_KEY> on every request. " +
   "On the owner's Mac the key is in ~/.config/laser-focus/agent.env (LASER_FOCUS_API_KEY=...).";
 
+/** A sync cursor: a non-negative integer, or null when malformed. */
+const cursor = (raw: string) => {
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 0 ? n : null;
+};
+
 export function storeFor(env: Env) {
   return env.STORE.get(env.STORE.idFromName("main"));
 }
@@ -57,8 +63,8 @@ export default {
         return json(await store.stats(days));
       }
       if (url.pathname === "/v1/sync" && req.method === "GET") {
-        const since = Number(url.searchParams.get("since") ?? "0");
-        if (!Number.isFinite(since) || since < 0) return json({ error: "BAD_SINCE" }, 400);
+        const since = cursor(url.searchParams.get("since") ?? "0");
+        if (since === null) return json({ error: "BAD_SINCE" }, 400);
         return json(await store.sync(since));
       }
       if (url.pathname === "/v1/ops" && req.method === "POST") {
@@ -69,9 +75,12 @@ export default {
           return json({ error: "BAD_JSON" }, 400);
         }
         if (!Array.isArray(body.ops)) return json({ error: "BAD_OPS" }, 400);
-        const r = await store.applyOps("me", body.ops);
+        const raw = url.searchParams.get("since");
+        const since = raw === null ? undefined : cursor(raw);
+        if (since === null) return json({ error: "BAD_SINCE" }, 400);
+        const r = await store.applyOps("me", body.ops, since);
         if (!r.ok) return json(r, 400);
-        return json({ version: r.version, items: r.items });
+        return json(r.since === undefined ? { version: r.version, items: r.items } : { version: r.version, items: r.items, since: r.since });
       }
     }
     return json({ error: "NOT_FOUND" }, 404);

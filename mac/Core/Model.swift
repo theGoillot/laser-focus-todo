@@ -235,9 +235,12 @@ public enum Op: Codable, Equatable, Sendable {
 public struct SyncResponse: Codable, Sendable, Equatable {
     public var version: Int
     public var items: [Item]
-    public init(version: Int, items: [Item]) {
+    /// Echoed by a push sent with a cursor: `items` then hold everything newer than it, so no pull is needed.
+    public var since: Int?
+    public init(version: Int, items: [Item], since: Int? = nil) {
         self.version = version
         self.items = items
+        self.since = since
     }
 }
 

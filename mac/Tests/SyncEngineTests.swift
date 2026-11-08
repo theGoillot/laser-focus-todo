@@ -9,10 +9,21 @@ final class FakeAPI: SyncAPI, @unchecked Sendable {
     var syncCalls: [Int] = []
     var failNextPostWith: Error?
     var rejectText: String?
+    /// False plays an old backend that ignores ?since (answers with only this batch, no echo).
+    var echoSince = true
+    /// Runs after a successful post, while the engine is waiting on the response (like a socket frame arriving).
+    var afterPost: (@Sendable () async -> Void)?
     let lock = NSLock()
 
-    func postOps(_ ops: [Op]) async throws -> SyncResponse {
+    func postOps(_ ops: [Op], since: Int) async throws -> SyncResponse {
+        let r = try apply(ops, since: since)
+        await afterPost?()
+        return r
+    }
+
+    private func apply(_ ops: [Op], since: Int) throws -> SyncResponse {
         try lock.withLock {
+            let before = version
             if let e = failNextPostWith { failNextPostWith = nil; throw e }
             if let bad = rejectText, let i = ops.firstIndex(where: { if case let .create(_, _, _, t, _) = $0 { return t == bad }; return false }) {
                 throw APIError.badOp(index: i, code: "TEXT_TOO_LONG")
@@ -30,7 +41,8 @@ final class FakeAPI: SyncAPI, @unchecked Sendable {
                 default: break
                 }
             }
-            return SyncResponse(version: version, items: [])
+            if !echoSince { return SyncResponse(version: version, items: items.values.filter { $0.version > before }) }
+            return SyncResponse(version: version, items: items.values.filter { $0.version > since }, since: since)
         }
     }
 
@@ -121,6 +133,47 @@ final class SyncEngineTests: XCTestCase {
         await engine.syncNow()
         XCTAssertEqual(try store.item("g")?.text, "Mine")
         XCTAssertEqual(try store.item("g")?.completedAt, "t")
+    }
+
+    func testEditIsOneRoundTrip() async throws {
+        api.agentAdds("g", "From bot")
+        try store.apply(.create(id: "a", parentId: nil, position: "a0", text: "Hi", note: nil))
+        await engine.syncNow()
+        XCTAssertEqual(api.postedBatches.count, 1)
+        XCTAssertEqual(api.syncCalls, [], "the push answered the pull")
+        XCTAssertEqual(try store.item("g")?.text, "From bot", "other actors' changes arrive with the push")
+        XCTAssertEqual(agentItems.value.map(\.id), ["g"])
+        XCTAssertEqual(try store.item("a")?.version, 2)
+        XCTAssertEqual(try store.lastVersion(), 2)
+    }
+
+    func testOldBackendWithoutSinceEchoStillPulls() async throws {
+        api.echoSince = false
+        api.agentAdds("g", "From bot")
+        try store.apply(.create(id: "a", parentId: nil, position: "a0", text: "Hi", note: nil))
+        await engine.syncNow()
+        XCTAssertEqual(api.syncCalls, [0], "no echo: never trust a partial answer")
+        XCTAssertEqual(try store.item("g")?.text, "From bot")
+    }
+
+    func testOwnVersionFrameDuringPushDoesNotSyncAgain() async throws {
+        let engine = self.engine!, api = self.api!
+        api.afterPost = { await engine.versionAnnounced(api.version) }
+        try store.apply(.create(id: "a", parentId: nil, position: "a0", text: "Hi", note: nil))
+        await engine.syncNow()
+        XCTAssertEqual(api.postedBatches.count + api.syncCalls.count, 1, "one request for one edit")
+    }
+
+    func testNewerVersionFrameDuringPushStillPulls() async throws {
+        let engine = self.engine!, api = self.api!
+        api.afterPost = {
+            api.afterPost = nil
+            api.agentAdds("g", "Late")
+            await engine.versionAnnounced(api.version)
+        }
+        try store.apply(.create(id: "a", parentId: nil, position: "a0", text: "Hi", note: nil))
+        await engine.syncNow()
+        XCTAssertEqual(try store.item("g")?.text, "Late")
     }
 
     func testBackoffSchedule() {

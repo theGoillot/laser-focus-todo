@@ -46,6 +46,8 @@ export interface Change {
 export interface SyncResponse {
   version: number;
   items: Item[];
+  /** Echoed by POST /v1/ops?since=N: items cover everything newer than N, so the client can skip its pull. */
+  since?: number;
 }
 
 export type ApplyResult = ({ ok: true } & SyncResponse) | { ok: false; error: string; opIndex: number; message: string };

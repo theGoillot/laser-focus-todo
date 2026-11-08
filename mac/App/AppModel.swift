@@ -77,7 +77,8 @@ final class AppModel: ObservableObject {
         }
         editor.onChange = { [weak self] in self?.engine?.kick() }
         connect(tokens.load())
-        timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+        // Safety net only: the live socket pushes every change within a second, and reconnects pull what was missed.
+        timer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.engine?.kick() }
         }
         path.pathUpdateHandler = { [weak self] p in
